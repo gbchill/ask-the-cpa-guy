@@ -1,10 +1,11 @@
+// src/components/DashboardClient.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 import { Question } from '@/types';
 
 interface QuestionCardProps {
@@ -49,6 +50,7 @@ export default function DashboardClient() {
         if (!authorized) return;
 
         const fetchQuestions = async () => {
+            const supabase = getSupabaseClient();
             try {
                 setLoading(true);
                 const { data, error } = await supabase
@@ -93,6 +95,7 @@ export default function DashboardClient() {
     const submitResponse = async (id: string) => {
         if (!responses[id]?.trim()) return;
         setSubmitting((prev) => ({ ...prev, [id]: true }));
+        const supabase = getSupabaseClient();
         try {
             const { error } = await supabase
                 .from('questions')
@@ -127,6 +130,7 @@ export default function DashboardClient() {
     };
 
     const markAsReviewed = async (id: string) => {
+        const supabase = getSupabaseClient();
         try {
             const { error } = await supabase
                 .from('questions')
@@ -145,7 +149,9 @@ export default function DashboardClient() {
                 )
             );
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update status');
+            setError(
+                err instanceof Error ? err.message : 'Failed to update status'
+            );
             console.error(err);
         }
     };
@@ -363,7 +369,9 @@ function StatusBadge({ status }: { status: Question['status'] }) {
             };
     }
     return (
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${props.className}`}>
+        <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${props.className}`}
+        >
             {props.label}
         </span>
     );

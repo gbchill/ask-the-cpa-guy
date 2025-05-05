@@ -15,7 +15,7 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 
 export default function QuestionForm() {
     const [showEmailPopup, setShowEmailPopup] = useState(false);
@@ -92,6 +92,9 @@ export default function QuestionForm() {
         setIsSubmitting(true);
         setSubmitError(null);
 
+        // instantiate supabase client at runtime
+        const supabase = getSupabaseClient();
+
         try {
             // Check existing usage
             const { data: usageData, error: usageError } = await supabase
@@ -158,7 +161,8 @@ export default function QuestionForm() {
                         Question Submitted!
                     </h3>
                     <p className="text-muted-foreground">
-                        Thank you for your question. Our CPA will review it and respond as soon as possible.
+                        Thank you for your question. Our CPA will review it and respond as
+                        soon as possible.
                     </p>
                     <p className="text-sm text-muted-foreground">
                         We&apos;ll send the answer to the email address you provided.
@@ -270,11 +274,15 @@ export default function QuestionForm() {
                 {showEmailPopup && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                         <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4">
-                            <h3 className="text-xl font-semibold mb-4" style={{ color: '#cd9f27' }}>
+                            <h3
+                                className="text-xl font-semibold mb-4"
+                                style={{ color: '#cd9f27' }}
+                            >
                                 Almost there!
                             </h3>
                             <p className="text-sm text-muted-foreground mb-4">
-                                Please provide your email address so we can send you the answer to your question.
+                                Please provide your email address so we can send you the answer
+                                to your question.
                             </p>
 
                             <FormField
@@ -336,7 +344,9 @@ export default function QuestionForm() {
             <div className="fixed bottom-0 left-0 right-0 flex justify-center">
                 <div className="max-w-4xl w-full text-center bg-background py-2">
                     <p className="text-xs text-muted-foreground">
-                        By submitting, you agree that this service provides general accounting guidance only. We do not cover tax, legal, or complex accounting topics.
+                        By submitting, you agree that this service provides general
+                        accounting guidance only. We do not cover tax, legal, or complex
+                        accounting topics.
                     </p>
                 </div>
             </div>
