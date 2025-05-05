@@ -1,3 +1,4 @@
+// app/ask/page.tsx
 import QuestionForm from '@/components/question-form';
 
 export const metadata = {
@@ -7,7 +8,7 @@ export const metadata = {
 
 export default function AskPage() {
     return (
-        <div className="container max-w-2xl py-10">
+        <div className="container mx-auto px-4 w-full">
             <QuestionForm />
         </div>
     );

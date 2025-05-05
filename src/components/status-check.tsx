@@ -1,3 +1,4 @@
+// src/components/status-check.tsx
 'use client';
 
 import { useState } from 'react';
@@ -5,17 +6,20 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+    Form,
+    FormField,
+    FormItem,
+    FormControl,
+    FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 import { Question } from '@/types';
 
 const statusSchema = z.object({
-    email: z.string().email({
-        message: 'Please enter a valid email address',
-    }),
+    email: z.string().email({ message: 'Please enter a valid email address' }),
 });
-
 type StatusFormValues = z.infer<typeof statusSchema>;
 
 export default function StatusCheck() {
@@ -25,14 +29,15 @@ export default function StatusCheck() {
 
     const form = useForm<StatusFormValues>({
         resolver: zodResolver(statusSchema),
-        defaultValues: {
-            email: '',
-        },
+        defaultValues: { email: '' },
     });
 
     async function onSubmit(values: StatusFormValues) {
         setIsChecking(true);
         setCheckError(null);
+
+        // get a Supabase client at runtime
+        const supabase = getSupabaseClient();
 
         try {
             const { data, error } = await supabase
@@ -43,14 +48,16 @@ export default function StatusCheck() {
 
             if (error) throw new Error('Error fetching your questions');
 
-            if (data.length === 0) {
+            if (!data || data.length === 0) {
                 setCheckError('No questions found for this email address');
                 setQuestions(null);
             } else {
                 setQuestions(data as Question[]);
             }
         } catch (err) {
-            setCheckError(err instanceof Error ? err.message : 'An unexpected error occurred');
+            setCheckError(
+                err instanceof Error ? err.message : 'An unexpected error occurred'
+            );
             setQuestions(null);
             console.error(err);
         } finally {
@@ -59,109 +66,65 @@ export default function StatusCheck() {
     }
 
     return (
-        <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
-            <div className="space-y-4">
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-semibold text-primary">Check Question Status</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Enter your email to check the status of your submitted questions.
-                    </p>
-                </div>
+        <div className="max-w-3xl mx-auto bg-[#303030] text-gray-100 rounded-lg shadow-lg p-8">
+            <h2 className="text-2xl font-semibold mb-4">Check Question Status</h2>
+            <p className="text-sm text-gray-300 mb-6">
+                Enter your email to view the status of your submitted questions.
+            </p>
 
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Email</FormLabel>
-                                    <div className="flex space-x-2">
-                                        <FormControl>
-                                            <Input
-                                                placeholder="your@email.com"
-                                                {...field}
-                                                disabled={isChecking}
-                                            />
-                                        </FormControl>
-                                        <Button type="submit" disabled={isChecking}>
-                                            {isChecking ? 'Checking...' : 'Check Status'}
-                                        </Button>
-                                    </div>
-                                    <FormMessage />
-                                </FormItem>
+            <Form
+                form={form}
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="flex gap-2 mb-6"
+            >
+                <FormField
+                    name="email"
+                    control={form.control}
+                    render={({ name, onChange, onBlur, ref }) => (
+                        <FormItem className="flex-1">
+                            <FormControl>
+                                <Input
+                                    id={name}
+                                    placeholder="you@example.com"
+                                    onChange={onChange}
+                                    onBlur={onBlur}
+                                    ref={ref}
+                                    disabled={isChecking}
+                                    className="w-full bg-[#2f2c2c] border-gray-600 text-gray-100 focus:border-yellow-400 focus:ring-yellow-400"
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <Button type="submit" disabled={isChecking}>
+                    {isChecking ? 'Checking…' : 'Check Status'}
+                </Button>
+            </Form>
+
+            {checkError && (
+                <div className="text-sm text-red-400 mb-6">{checkError}</div>
+            )}
+
+            {questions && (
+                <ul className="space-y-6">
+                    {questions.map((q) => (
+                        <li key={q.id} className="border-t border-gray-700 pt-4">
+                            {/* Render each question’s status, response, etc. */}
+                            <p className="font-medium text-lg">{q.question_text}</p>
+                            <p className="text-sm mt-1">
+                                Status: <span className="font-semibold">{q.status}</span>
+                            </p>
+                            {q.cpa_response && (
+                                <blockquote className="mt-2 p-3 bg-gray-800 rounded">
+                                    <p className="italic">“{q.cpa_response}”</p>
+                                </blockquote>
                             )}
-                        />
-                    </form>
-                </Form>
-
-                {checkError && (
-                    <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                        {checkError}
-                    </div>
-                )}
-
-                {questions && questions.length > 0 && (
-                    <div className="mt-6 space-y-6">
-                        <h3 className="text-lg font-medium">Your Questions</h3>
-                        <div className="space-y-4">
-                            {questions.map((question) => (
-                                <div key={question.id} className="rounded-md border p-4">
-                                    <div className="mb-2 flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">
-                                            Submitted: {new Date(question.created_at).toLocaleDateString()}
-                                        </span>
-                                        <StatusBadge status={question.status} />
-                                    </div>
-                                    <p className="mb-4 font-medium">{question.question_text}</p>
-
-                                    {question.status === 'answered' && question.cpa_response && (
-                                        <div className="mt-4 rounded-md bg-primary/10 p-3">
-                                            <h4 className="mb-2 font-medium text-primary">CPA Response:</h4>
-                                            <p className="text-sm">{question.cpa_response}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
-    );
-}
-
-function StatusBadge({ status }: { status: Question['status'] }) {
-    const getStatusProps = () => {
-        switch (status) {
-            case 'pending':
-                return {
-                    className: 'bg-yellow-100 text-yellow-800',
-                    label: 'Pending Review'
-                };
-            case 'reviewed':
-                return {
-                    className: 'bg-blue-100 text-blue-800',
-                    label: 'In Progress'
-                };
-            case 'answered':
-                return {
-                    className: 'bg-green-100 text-green-800',
-                    label: 'Answered'
-                };
-            default:
-                return {
-                    className: 'bg-gray-100 text-gray-800',
-                    label: status
-                };
-        }
-    };
-
-    const { className, label } = getStatusProps();
-
-    return (
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>
-            {label}
-        </span>
     );
 }

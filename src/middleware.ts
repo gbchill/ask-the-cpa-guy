@@ -1,7 +1,7 @@
+// src/middleware.ts
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function middleware() {
     // Get response
     const response = NextResponse.next();
 
@@ -14,7 +14,10 @@ export function middleware(request: NextRequest) {
         "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://*.supabase.co;"
     );
     response.headers.set('X-XSS-Protection', '1; mode=block');
-    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+    response.headers.set(
+        'Strict-Transport-Security',
+        'max-age=63072000; includeSubDomains; preload'
+    );
 
     return response;
 }

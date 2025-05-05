@@ -1,7 +1,19 @@
+// src/components/shared/footer.tsx
+'use client';
+
+import { usePathname } from 'next/navigation';
+
 export default function Footer() {
+    const pathname = usePathname();
+
+    // don’t render footer on Ask or Status pages
+    if (pathname === '/ask' || pathname === '/status') {
+        return null;
+    }
+
     return (
-        <footer className="w-full border-t border-border/40 bg-background py-4">
-            <div className="container flex flex-col items-center justify-center space-y-2 text-center text-sm text-muted-foreground">
+        <footer className="w-full bg-background mt-auto py-12">
+            <div className="w-full px-6 flex flex-col items-center justify-center space-y-2 text-center text-sm text-muted-foreground">
                 <p>© {new Date().getFullYear()} Ask the CPA Guy. All rights reserved.</p>
                 <div className="text-xs max-w-2xl mt-1">
                     <p className="mb-2">

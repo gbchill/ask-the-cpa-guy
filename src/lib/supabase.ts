@@ -1,6 +1,21 @@
-import { createClient } from '@supabase/supabase-js';
+// src/lib/supabase.ts
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+let cached: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+/**
+ * Creates (and caches) a Supabase client *at request time*,
+ * so it never runs at module‐import time during the build.
+ */
+export function getSupabaseClient(): SupabaseClient {
+    if (cached) return cached;
+
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_ANON_KEY;
+    if (!url || !key) {
+        throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+    }
+
+    cached = createClient(url, key);
+    return cached;
+}

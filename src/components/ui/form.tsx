@@ -1,110 +1,108 @@
-import * as React from "react";
-import { useForm as useReactHookForm, UseFormReturn, FieldValues, FieldPath } from "react-hook-form";
+// src/components/ui/form.tsx
+import * as React from 'react';
+import {
+    useForm as useReactHookForm,
+    FormProvider,
+    UseFormReturn,
+    FieldValues,
+    FieldPath,
+    Control,
+    useController,
+    UseControllerReturn,
+} from 'react-hook-form';
 
-const Form = React.forwardRef<
-    HTMLFormElement,
-    React.FormHTMLAttributes<HTMLFormElement> & {
-        form: UseFormReturn<any>;
-    }
->(({ form, children, className = "", ...props }, ref) => {
+/** Props for a generic RHF-powered form wrapper */
+export interface FormProps<TFieldValues extends FieldValues>
+    extends React.FormHTMLAttributes<HTMLFormElement> {
+    form: UseFormReturn<TFieldValues>;
+}
+
+function FormComponent<TFieldValues extends FieldValues>(
+    { form, children, onSubmit, ...rest }: FormProps<TFieldValues>,
+    ref: React.Ref<HTMLFormElement>
+) {
     return (
-        <form ref={ref} {...props}>
-            {children}
-        </form>
+        <FormProvider {...form}>
+            <form ref={ref} onSubmit={onSubmit} {...rest}>
+                {children}
+            </form>
+        </FormProvider>
     );
-});
-Form.displayName = "Form";
+}
 
-type FormFieldContextValue<
-    TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
-> = {
-    name: TName;
-};
+type FormType = (<TFieldValues extends FieldValues>(
+    props: FormProps<TFieldValues> & { ref?: React.Ref<HTMLFormElement> }
+) => React.ReactElement | null) & { displayName?: string };
 
-const FormFieldContext = React.createContext<FormFieldContextValue>(
-    {} as FormFieldContextValue
+export const Form = React.forwardRef(FormComponent) as FormType;
+Form.displayName = 'Form';
+
+// We only need a plain string here to verify context usage
+const FormFieldContext = React.createContext<{ name: string } | undefined>(
+    undefined
 );
 
-const FormField = <
-    TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->({
-    name,
-    control,
-    render,
-}: {
+export function FormField<
+    TFieldValues extends FieldValues,
+    TName extends FieldPath<TFieldValues>
+>(props: {
     name: TName;
-    control: UseFormReturn<TFieldValues>["control"];
-    render: React.ReactNode | ((field: any) => React.ReactElement);
-}) => {
-    const field = control.register(name);
+    control: Control<TFieldValues>;
+    render:
+    | React.ReactNode
+    | ((field: UseControllerReturn<TFieldValues, TName>['field']) => React.ReactElement);
+}) {
+    const { name, control, render } = props;
+    const { field } = useController({ name, control });
 
     return (
-        <FormFieldContext.Provider value={{ name }}>
-            {typeof render === "function"
-                ? render(field)
-                : render}
+        <FormFieldContext.Provider value={{ name: String(name) }}>
+            {typeof render === 'function' ? render(field) : render}
         </FormFieldContext.Provider>
     );
-};
+}
 
-const useFormField = () => {
-    const fieldContext = React.useContext(FormFieldContext);
-    if (!fieldContext) {
-        throw new Error("useFormField should be used within a FormField");
+function useFormField() {
+    const ctx = React.useContext(FormFieldContext);
+    if (!ctx) {
+        throw new Error('useFormField must be used inside <FormField>');
     }
-    return fieldContext;
-};
+    return ctx;
+}
 
-const FormItem = React.forwardRef<
+export const FormItem = React.forwardRef<
     HTMLDivElement,
     React.HTMLAttributes<HTMLDivElement>
->(({ className = "", ...props }, ref) => {
-    return (
-        <div
-            ref={ref}
-            className={`space-y-2 ${className}`}
-            {...props}
-        />
-    );
-});
-FormItem.displayName = "FormItem";
+>(({ className = '', ...props }, ref) => (
+    <div ref={ref} className={`space-y-2 ${className}`} {...props} />
+));
+FormItem.displayName = 'FormItem';
 
-const FormLabel = React.forwardRef<
+export const FormLabel = React.forwardRef<
     HTMLLabelElement,
     React.LabelHTMLAttributes<HTMLLabelElement>
->(({ className = "", ...props }, ref) => {
-    return (
-        <label
-            ref={ref}
-            className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className}`}
-            {...props}
-        />
-    );
-});
-FormLabel.displayName = "FormLabel";
+>(({ className = '', ...props }, ref) => (
+    <label
+        ref={ref}
+        className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className}`}
+        {...props}
+    />
+));
+FormLabel.displayName = 'FormLabel';
 
-const FormControl = React.forwardRef<
+export const FormControl = React.forwardRef<
     HTMLDivElement,
     React.HTMLAttributes<HTMLDivElement>
->(({ className = "", ...props }, ref) => {
-    return (
-        <div
-            ref={ref}
-            className={`${className}`}
-            {...props}
-        />
-    );
-});
-FormControl.displayName = "FormControl";
+>(({ className = '', ...props }, ref) => (
+    <div ref={ref} className={className} {...props} />
+));
+FormControl.displayName = 'FormControl';
 
-const FormMessage = React.forwardRef<
+export const FormMessage = React.forwardRef<
     HTMLParagraphElement,
     React.HTMLAttributes<HTMLParagraphElement>
->(({ className = "", children, ...props }, ref) => {
-    const { name } = useFormField();
-
+>(({ className = '', children, ...props }, ref) => {
+    useFormField(); // ensure we're in a <FormField> but we don't actually need `name` here
     return (
         <p
             ref={ref}
@@ -115,14 +113,6 @@ const FormMessage = React.forwardRef<
         </p>
     );
 });
-FormMessage.displayName = "FormMessage";
+FormMessage.displayName = 'FormMessage';
 
-export {
-    useReactHookForm as useForm,
-    Form,
-    FormItem,
-    FormLabel,
-    FormControl,
-    FormMessage,
-    FormField,
-};
+export { useReactHookForm as useForm };
