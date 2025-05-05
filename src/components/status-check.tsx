@@ -1,3 +1,4 @@
+// src/components/status-check.tsx
 'use client';
 
 import { useState } from 'react';
@@ -11,11 +12,8 @@ import { supabase } from '@/lib/supabase';
 import { Question } from '@/types';
 
 const statusSchema = z.object({
-    email: z.string().email({
-        message: 'Please enter a valid email address',
-    }),
+    email: z.string().email({ message: 'Please enter a valid email address' }),
 });
-
 type StatusFormValues = z.infer<typeof statusSchema>;
 
 export default function StatusCheck() {
@@ -25,9 +23,7 @@ export default function StatusCheck() {
 
     const form = useForm<StatusFormValues>({
         resolver: zodResolver(statusSchema),
-        defaultValues: {
-            email: '',
-        },
+        defaultValues: { email: '' },
     });
 
     async function onSubmit(values: StatusFormValues) {
@@ -59,108 +55,79 @@ export default function StatusCheck() {
     }
 
     return (
-        <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
-            <div className="space-y-4">
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-semibold text-primary">Check Question Status</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Enter your email to check the status of your submitted questions.
-                    </p>
+        <div className="max-w-3xl mx-auto bg-[#303030] text-gray-100 rounded-lg shadow-lg p-8">
+            <h2 className="text-2xl font-semibold mb-4">Check Question Status</h2>
+            <p className="text-sm text-gray-300 mb-6">
+                Enter your email to view the status of your submitted questions.
+            </p>
+
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2 mb-6">
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem className="flex-1">
+                                <FormControl>
+                                    <Input
+                                        placeholder="you@example.com"
+                                        {...field}
+                                        disabled={isChecking}
+                                        className="w-full bg-[#2f2c2c] border-gray-600 text-gray-100 focus:border-yellow-400 focus:ring-yellow-400"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <Button type="submit" disabled={isChecking}>
+                        {isChecking ? 'Checking…' : 'Check Status'}
+                    </Button>
+                </form>
+            </Form>
+
+            {checkError && (
+                <div className="text-sm text-red-400 mb-6">
+                    {checkError}
                 </div>
+            )}
 
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Email</FormLabel>
-                                    <div className="flex space-x-2">
-                                        <FormControl>
-                                            <Input
-                                                placeholder="your@email.com"
-                                                {...field}
-                                                disabled={isChecking}
-                                            />
-                                        </FormControl>
-                                        <Button type="submit" disabled={isChecking}>
-                                            {isChecking ? 'Checking...' : 'Check Status'}
-                                        </Button>
-                                    </div>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </form>
-                </Form>
-
-                {checkError && (
-                    <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                        {checkError}
-                    </div>
-                )}
-
-                {questions && questions.length > 0 && (
-                    <div className="mt-6 space-y-6">
-                        <h3 className="text-lg font-medium">Your Questions</h3>
-                        <div className="space-y-4">
-                            {questions.map((question) => (
-                                <div key={question.id} className="rounded-md border p-4">
-                                    <div className="mb-2 flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">
-                                            Submitted: {new Date(question.created_at).toLocaleDateString()}
-                                        </span>
-                                        <StatusBadge status={question.status} />
-                                    </div>
-                                    <p className="mb-4 font-medium">{question.question_text}</p>
-
-                                    {question.status === 'answered' && question.cpa_response && (
-                                        <div className="mt-4 rounded-md bg-primary/10 p-3">
-                                            <h4 className="mb-2 font-medium text-primary">CPA Response:</h4>
-                                            <p className="text-sm">{question.cpa_response}</p>
-                                        </div>
-                                    )}
+            {questions && (
+                <ul className="space-y-6">
+                    {questions.map((q) => (
+                        <li key={q.id} className="border-t border-gray-700 pt-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-400">
+                                    {new Date(q.created_at).toLocaleDateString()}
+                                </span>
+                                <StatusBadge status={q.status} />
+                            </div>
+                            <p className="mt-2 font-medium">{q.question_text}</p>
+                            {q.status === 'answered' && q.cpa_response && (
+                                <div className="mt-4 bg-[#2f2c2c] p-4 rounded">
+                                    <h4 className="font-medium mb-2">CPA Response:</h4>
+                                    <p className="text-sm">{q.cpa_response}</p>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     );
 }
 
 function StatusBadge({ status }: { status: Question['status'] }) {
-    const getStatusProps = () => {
-        switch (status) {
-            case 'pending':
-                return {
-                    className: 'bg-yellow-100 text-yellow-800',
-                    label: 'Pending Review'
-                };
-            case 'reviewed':
-                return {
-                    className: 'bg-blue-100 text-blue-800',
-                    label: 'In Progress'
-                };
-            case 'answered':
-                return {
-                    className: 'bg-green-100 text-green-800',
-                    label: 'Answered'
-                };
-            default:
-                return {
-                    className: 'bg-gray-100 text-gray-800',
-                    label: status
-                };
-        }
-    };
+    const mapping = {
+        pending: { label: 'Pending Review', color: 'bg-yellow-900/20 text-yellow-300' },
+        reviewed: { label: 'In Progress', color: 'bg-blue-900/20 text-blue-300' },
+        answered: { label: 'Answered', color: 'bg-green-900/20 text-green-300' },
+    } as const;
 
-    const { className, label } = getStatusProps();
+    const { label, color } = mapping[status] ?? { label: status, color: 'bg-gray-700/20 text-gray-400' };
 
     return (
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${color}`}>
             {label}
         </span>
     );

@@ -1,4 +1,5 @@
-import StatusCheck from '../../components/status-check';
+// src/app/status/page.tsx
+import StatusCheck from '@/components/status-check';
 
 export const metadata = {
     title: 'Check Status - Ask the CPA Guy',
@@ -7,7 +8,7 @@ export const metadata = {
 
 export default function StatusPage() {
     return (
-        <div className="container max-w-3xl py-10">
+        <div className="container mx-auto px-4 py-12 w-full">
             <StatusCheck />
         </div>
     );

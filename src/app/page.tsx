@@ -1,10 +1,9 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import './globals.css'
 
 export default function Home() {
   return (
-    <div className="container flex flex-col items-center justify-center space-y-12 py-20 text-center">
+    <div className="container mx-auto px-4 flex flex-col items-center justify-center space-y-12 py-16 text-center">
       <div className="space-y-4">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
           Ask the <span className="text-primary">CPA Guy</span>
@@ -16,10 +15,10 @@ export default function Home() {
 
       <div className="flex flex-col gap-4 sm:flex-row">
         <Link href="/ask">
-          <Button size="lg" className="px-8">Ask a Question</Button>
+          <Button size="lg" className="px-8 shadow-gold hover:shadow-gold/80">Ask a Question</Button>
         </Link>
         <Link href="/status">
-          <Button size="lg" variant="outline" className="px-8">Check Status</Button>
+          <Button size="lg" variant="outline" className="px-8 hover:shadow-gold">Check Status</Button>
         </Link>
       </div>
 
@@ -38,7 +37,7 @@ export default function Home() {
         />
       </div>
 
-      <div className="mx-auto max-w-3xl rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+      <div className="mx-auto max-w-3xl rounded-lg border border-border bg-card p-6 text-card-foreground shadow-gold/30">
         <h2 className="mb-4 text-xl font-semibold text-primary">How It Works</h2>
         <ol className="list-decimal space-y-3 text-left pl-6">
           <li>Submit your accounting or QuickBooks question through our simple form.</li>
@@ -53,8 +52,8 @@ export default function Home() {
 
 function FeatureCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
-      <h3 className="mb-2 text-lg font-medium">{title}</h3>
+    <div className="rounded-lg border border-border bg-card p-6 text-card-foreground shadow-sm hover:shadow-gold/30 transition-shadow">
+      <h3 className="mb-2 text-lg font-medium text-primary">{title}</h3>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
   );
