@@ -1,11 +1,19 @@
+// src/app/QuestionForm.tsx
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type MutableRefObject } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { questionSchema, type QuestionFormValues } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 
@@ -14,7 +22,11 @@ export default function QuestionForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // use a mutable ref so we can assign .current
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null) as MutableRefObject<
+        HTMLTextAreaElement | null
+    >;
 
     // Choose a random welcome message on initial render
     const welcomeMessages = [
@@ -22,9 +34,8 @@ export default function QuestionForm() {
         "Need help with QuickBooks or bookkeeping?",
         "Have a financial reporting question?",
         "Confused about accounting principles?",
-        "What's your accounting challenge?"
+        "What's your accounting challenge?",
     ];
-
     const randomIndex = Math.floor(Math.random() * welcomeMessages.length);
     const welcomeMessage = welcomeMessages[randomIndex];
 
@@ -36,51 +47,33 @@ export default function QuestionForm() {
         },
     });
 
-    // Auto-resize textarea on input and when form values change
+    // Auto-resize textarea
     const autoResizeTextarea = () => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-
-        textarea.style.height = 'auto';
-        textarea.style.height = `${Math.min(textarea.scrollHeight, 300)}px`;
-
-        // Add scrollbar only when content exceeds max height
-        if (textarea.scrollHeight > 300) {
-            textarea.style.overflowY = 'auto';
-        } else {
-            textarea.style.overflowY = 'hidden';
-        }
+        const ta = textareaRef.current;
+        if (!ta) return;
+        ta.style.height = 'auto';
+        ta.style.height = `${Math.min(ta.scrollHeight, 300)}px`;
+        ta.style.overflowY = ta.scrollHeight > 300 ? 'auto' : 'hidden';
     };
 
     // Watch for changes in form values to trigger resize
     useEffect(() => {
-        const subscription = form.watch(() => {
-            setTimeout(autoResizeTextarea, 0);
-        });
-        return () => subscription.unsubscribe();
+        const sub = form.watch(() => setTimeout(autoResizeTextarea, 0));
+        return () => sub.unsubscribe();
     }, [form]);
 
     // Initial setup and event binding
     useEffect(() => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-
-        // Set initial height
+        const ta = textareaRef.current;
+        if (!ta) return;
         setTimeout(autoResizeTextarea, 0);
-
-        // Add event listener
-        const handleInput = () => autoResizeTextarea();
-        textarea.addEventListener('input', handleInput);
-
-        return () => {
-            textarea.removeEventListener('input', handleInput);
-        };
+        ta.addEventListener('input', autoResizeTextarea);
+        return () => ta.removeEventListener('input', autoResizeTextarea);
     }, []);
 
     // Handle the initial question submission
     const handleQuestionSubmit = () => {
         const questionValue = form.getValues().question;
-
         if (questionValue.length < 10) {
             form.setError('question', {
                 type: 'manual',
@@ -88,32 +81,28 @@ export default function QuestionForm() {
             });
             return;
         }
-
         setShowEmailPopup(true);
     };
 
     // Close email popup
-    const handleClosePopup = () => {
-        setShowEmailPopup(false);
-    };
+    const handleClosePopup = () => setShowEmailPopup(false);
 
+    // Final submit
     async function onSubmit(values: QuestionFormValues) {
         setIsSubmitting(true);
         setSubmitError(null);
 
         try {
-            // First check if this email has already submitted a question
+            // Check existing usage
             const { data: usageData, error: usageError } = await supabase
                 .from('email_usage')
                 .select('*')
                 .eq('email', values.email)
                 .single();
-
             if (usageError && usageError.code !== 'PGRST116') {
                 throw new Error('Error checking previous questions');
             }
 
-            // If email already exists in system, update the count
             if (usageData) {
                 const { error: updateError } = await supabase
                     .from('email_usage')
@@ -122,21 +111,18 @@ export default function QuestionForm() {
                         last_question_at: new Date().toISOString(),
                     })
                     .eq('email', values.email);
-
                 if (updateError) throw new Error('Error updating usage data');
             } else {
-                // First time user, insert a new record
-                const { error: insertUsageError } = await supabase
+                const { error: insertError } = await supabase
                     .from('email_usage')
                     .insert([
                         {
                             email: values.email,
                             question_count: 1,
-                            last_question_at: new Date().toISOString()
-                        }
+                            last_question_at: new Date().toISOString(),
+                        },
                     ]);
-
-                if (insertUsageError) throw new Error('Error recording usage data');
+                if (insertError) throw new Error('Error recording usage data');
             }
 
             // Insert the question
@@ -146,18 +132,18 @@ export default function QuestionForm() {
                     {
                         user_email: values.email,
                         question_text: values.question,
-                        status: 'pending'
-                    }
+                        status: 'pending',
+                    },
                 ]);
-
             if (questionError) throw new Error('Error submitting your question');
 
-            // Success!
             setSubmitSuccess(true);
             setShowEmailPopup(false);
             form.reset();
         } catch (err) {
-            setSubmitError(err instanceof Error ? err.message : 'An unexpected error occurred');
+            setSubmitError(
+                err instanceof Error ? err.message : 'An unexpected error occurred'
+            );
             console.error(err);
         } finally {
             setIsSubmitting(false);
@@ -168,12 +154,14 @@ export default function QuestionForm() {
         return (
             <div className="max-w-3xl mx-auto">
                 <div className="flex flex-col items-center space-y-4 text-center">
-                    <h3 className="text-2xl font-semibold" style={{ color: '#cd9f27' }}>Question Submitted!</h3>
+                    <h3 className="text-2xl font-semibold" style={{ color: '#cd9f27' }}>
+                        Question Submitted!
+                    </h3>
                     <p className="text-muted-foreground">
                         Thank you for your question. Our CPA will review it and respond as soon as possible.
                     </p>
                     <p className="text-sm text-muted-foreground">
-                        We'll send the answer to the email address you provided.
+                        We&apos;ll send the answer to the email address you provided.
                     </p>
                     <Button
                         className="mt-4 text-white"
@@ -193,8 +181,10 @@ export default function QuestionForm() {
     return (
         <>
             <div className="max-w-4xl mx-auto mt-8">
-                {/* Welcome message with explicit styling to ensure visibility */}
-                <h2 className="text-4xl font-semibold mb-8 text-center text-white" style={{ display: 'block', marginBottom: '2rem' }}>
+                <h2
+                    className="text-4xl font-semibold mb-8 text-center text-white"
+                    style={{ marginBottom: '2rem' }}
+                >
                     {welcomeMessage}
                 </h2>
 
@@ -203,14 +193,17 @@ export default function QuestionForm() {
                         <FormField
                             name="question"
                             control={form.control}
-                            render={({ field }) => (
+                            render={(field) => (
                                 <FormItem>
                                     <FormControl>
                                         <div className="relative">
                                             <textarea
-                                                ref={textareaRef}
-                                                placeholder="Ask your accounting or QuickBooks question here..."
                                                 {...field}
+                                                ref={(el) => {
+                                                    field.ref(el);
+                                                    textareaRef.current = el;
+                                                }}
+                                                placeholder="Ask your accounting or QuickBooks question here..."
                                                 disabled={isSubmitting}
                                                 className="w-full text-lg resize-none overflow-hidden"
                                                 style={{
@@ -223,9 +216,8 @@ export default function QuestionForm() {
                                                     paddingRight: '4rem',
                                                     minHeight: '100px',
                                                     maxHeight: '300px',
-                                                    width: '100%',
                                                     outline: 'none',
-                                                    lineHeight: '1.5'
+                                                    lineHeight: '1.5',
                                                 }}
                                                 onChange={(e) => {
                                                     field.onChange(e);
@@ -233,7 +225,6 @@ export default function QuestionForm() {
                                                 }}
                                             />
 
-                                            {/* Submit button with upward arrow */}
                                             <div className="absolute right-4 top-14">
                                                 <Button
                                                     type="button"
@@ -245,13 +236,23 @@ export default function QuestionForm() {
                                                         width: '10px',
                                                         height: '10px',
                                                         minWidth: '36px',
-                                                        minHeight: '36px'
+                                                        minHeight: '36px',
                                                     }}
                                                     disabled={isSubmitting}
                                                     onClick={handleQuestionSubmit}
                                                     aria-label="Submit question"
                                                 >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="18"
+                                                        height="18"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="white"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                    >
                                                         <path d="M12 19V5" />
                                                         <path d="M5 12l7-7 7 7" />
                                                     </svg>
@@ -266,11 +267,12 @@ export default function QuestionForm() {
                     </form>
                 </Form>
 
-                {/* Email Popup */}
                 {showEmailPopup && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                         <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4">
-                            <h3 className="text-xl font-semibold mb-4" style={{ color: '#cd9f27' }}>Almost there!</h3>
+                            <h3 className="text-xl font-semibold mb-4" style={{ color: '#cd9f27' }}>
+                                Almost there!
+                            </h3>
                             <p className="text-sm text-muted-foreground mb-4">
                                 Please provide your email address so we can send you the answer to your question.
                             </p>
@@ -278,19 +280,19 @@ export default function QuestionForm() {
                             <FormField
                                 name="email"
                                 control={form.control}
-                                render={({ field }) => (
+                                render={(field) => (
                                     <FormItem>
                                         <FormLabel>Your Email</FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="your@email.com"
                                                 {...field}
+                                                placeholder="your@email.com"
                                                 disabled={isSubmitting}
                                                 className="rounded-[16px] text-lg"
                                                 style={{
                                                     backgroundColor: '#303030',
                                                     borderColor: '#cd9f27',
-                                                    fontSize: '16px'
+                                                    fontSize: '16px',
                                                 }}
                                             />
                                         </FormControl>
@@ -330,7 +332,7 @@ export default function QuestionForm() {
                 )}
             </div>
 
-            {/* Always-visible footer notice, centered */}
+            {/* Always-visible footer notice */}
             <div className="fixed bottom-0 left-0 right-0 flex justify-center">
                 <div className="max-w-4xl w-full text-center bg-background py-2">
                     <p className="text-xs text-muted-foreground">

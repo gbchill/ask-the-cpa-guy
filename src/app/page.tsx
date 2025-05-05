@@ -41,7 +41,7 @@ export default function Home() {
         <h2 className="mb-4 text-xl font-semibold text-primary">How It Works</h2>
         <ol className="list-decimal space-y-3 text-left pl-6">
           <li>Submit your accounting or QuickBooks question through our simple form.</li>
-          <li>Provide your email address where you'd like to receive your answer.</li>
+          <li>Provide your email address where you&apos;d like to receive your answer.</li>
           <li>Our certified CPA reviews your question and prepares a response.</li>
           <li>Receive your personalized answer directly in your inbox!</li>
         </ol>

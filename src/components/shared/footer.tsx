@@ -12,7 +12,7 @@ export default function Footer() {
     }
 
     return (
-        <footer className="w-full bg-background mt-auto py-8">
+        <footer className="w-full bg-background mt-auto py-12">
             <div className="w-full px-6 flex flex-col items-center justify-center space-y-2 text-center text-sm text-muted-foreground">
                 <p>© {new Date().getFullYear()} Ask the CPA Guy. All rights reserved.</p>
                 <div className="text-xs max-w-2xl mt-1">
