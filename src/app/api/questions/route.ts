@@ -1,8 +1,11 @@
+// src/app/api/questions/route.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
+    const supabase = getSupabaseClient();
+
     try {
         const data = await request.json();
 
@@ -16,12 +19,24 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({ success: true }, { status: 201 });
-    } catch (error) {
-        return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
+    } catch {
+        return NextResponse.json(
+            { error: 'Failed to process request' },
+            { status: 500 }
+        );
     }
 }
 
 export async function GET() {
-    // This is just a placeholder - you might want to implement this later
-    return NextResponse.json({ message: 'Questions API endpoint' });
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase
+        .from('questions')
+        .select('*');
+
+    if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json(data);
 }
