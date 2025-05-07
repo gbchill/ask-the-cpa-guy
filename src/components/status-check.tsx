@@ -66,9 +66,16 @@ export default function StatusCheck() {
     }
 
     return (
-        <div className="max-w-3xl mx-auto bg-[#303030] text-gray-100 rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-semibold mb-4">Check Question Status</h2>
-            <p className="text-sm text-gray-300 mb-6">
+        <div 
+            className="max-w-3xl mx-auto bg-[#303030] text-white rounded-lg shadow-gold p-8"
+            style={{ 
+                borderColor: '#cd9f27', 
+                borderWidth: '1px',
+                boxShadow: '0 0 10px rgba(205, 159, 39, 0.5)'
+            }}
+        >
+            <h2 className="text-2xl font-semibold mb-4" style={{ color: '#cd9f27' }}>Check Question Status</h2>
+            <p className="text-sm text-muted-foreground mb-6">
                 Enter your email to view the status of your submitted questions.
             </p>
 
@@ -90,7 +97,12 @@ export default function StatusCheck() {
                                     onBlur={onBlur}
                                     ref={ref}
                                     disabled={isChecking}
-                                    className="w-full bg-[#2f2c2c] border-gray-600 text-gray-100 focus:border-yellow-400 focus:ring-yellow-400"
+                                    className="w-full rounded-[16px] text-lg"
+                                    style={{
+                                        backgroundColor: '#303030',
+                                        borderColor: '#cd9f27',
+                                        fontSize: '16px',
+                                    }}
                                 />
                             </FormControl>
                             <FormMessage />
@@ -98,7 +110,12 @@ export default function StatusCheck() {
                     )}
                 />
 
-                <Button type="submit" disabled={isChecking}>
+                <Button 
+                    type="submit" 
+                    disabled={isChecking}
+                    className="shadow-gold hover:shadow-gold/80"
+                    style={{ backgroundColor: '#cd9f27' }}
+                >
                     {isChecking ? 'Checking…' : 'Check Status'}
                 </Button>
             </Form>
@@ -110,15 +127,14 @@ export default function StatusCheck() {
             {questions && (
                 <ul className="space-y-6">
                     {questions.map((q) => (
-                        <li key={q.id} className="border-t border-gray-700 pt-4">
-                            {/* Render each question’s status, response, etc. */}
+                        <li key={q.id} className="border-t border-[#3d3d3d] pt-4">
                             <p className="font-medium text-lg">{q.question_text}</p>
                             <p className="text-sm mt-1">
-                                Status: <span className="font-semibold">{q.status}</span>
+                                Status: <span className="font-semibold" style={{ color: '#cd9f27' }}>{q.status}</span>
                             </p>
                             {q.cpa_response && (
-                                <blockquote className="mt-2 p-3 bg-gray-800 rounded">
-                                    <p className="italic">“{q.cpa_response}”</p>
+                                <blockquote className="mt-2 p-3 bg-[#212121] rounded border border-[#3d3d3d]">
+                                    <p className="italic">{q.cpa_response}</p>
                                 </blockquote>
                             )}
                         </li>
