@@ -1,4 +1,3 @@
-// src/components/DashboardClient.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -31,54 +30,84 @@ export default function DashboardClient() {
     const statusFilter = searchParams.get('status');
 
     const checkAuth = () => {
-        if (password === 'cpa123') {
+        console.log('Checking authorization');
+        // Get the admin password from environment variable
+        const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+        
+        if (!adminPassword) {
+            console.error('Admin password environment variable is not set');
+            setError('Authentication system error. Please contact the administrator.');
+            return;
+        }
+        
+        if (password === adminPassword) {
+            console.log('Password correct, authorizing');
             setAuthorized(true);
             localStorage.setItem('cpa_dashboard_auth', 'true');
             setError(null);
         } else {
+            console.log('Password incorrect');
             setError('Incorrect password');
         }
     };
 
+    const fetchQuestions = async () => {
+        console.log('Running fetchQuestions function');
+        const supabase = getSupabaseClient();
+        try {
+            setLoading(true);
+            console.log('Fetching questions from Supabase...');
+            
+            const { data, error } = await supabase
+                .from('questions')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            console.log('Fetch result:', { data, error });
+            
+            if (error) throw new Error(error.message);
+
+            setQuestions(data as Question[]);
+            const respObj: Record<string, string> = {};
+            data.forEach((q) => {
+                respObj[q.id] = q.cpa_response ?? '';
+            });
+            setResponses(respObj);
+        } catch (err) {
+            console.error('Error fetching questions:', err);
+            setError(
+                err instanceof Error ? err.message : 'Failed to load questions'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
+        // Add console log to debug auth state
+        console.log('Auth state:', { 
+            authorized, 
+            storedAuth: typeof window !== 'undefined' ? 
+                localStorage.getItem('cpa_dashboard_auth') : null 
+        });
+        
         if (
             typeof window !== 'undefined' &&
             localStorage.getItem('cpa_dashboard_auth') === 'true'
         ) {
             setAuthorized(true);
         }
+    }, []);
+
+    useEffect(() => {
+        console.log('authorized changed:', authorized);
         if (!authorized) return;
-
-        const fetchQuestions = async () => {
-            const supabase = getSupabaseClient();
-            try {
-                setLoading(true);
-                const { data, error } = await supabase
-                    .from('questions')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-                if (error) throw new Error(error.message);
-
-                setQuestions(data as Question[]);
-                const respObj: Record<string, string> = {};
-                data.forEach((q) => {
-                    respObj[q.id] = q.cpa_response ?? '';
-                });
-                setResponses(respObj);
-            } catch (err) {
-                setError(
-                    err instanceof Error ? err.message : 'Failed to load questions'
-                );
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
+        
         fetchQuestions();
     }, [authorized]);
 
     useEffect(() => {
+        console.log('Filtering questions:', { statusFilter, questionCount: questions.length });
         if (statusFilter && questions.length > 0) {
             setFilteredQuestions(
                 questions.filter((q) => q.status === statusFilter)
@@ -97,6 +126,7 @@ export default function DashboardClient() {
         setSubmitting((prev) => ({ ...prev, [id]: true }));
         const supabase = getSupabaseClient();
         try {
+            console.log('Submitting response for question:', id);
             const { error } = await supabase
                 .from('questions')
                 .update({
@@ -105,6 +135,9 @@ export default function DashboardClient() {
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', id);
+            
+            console.log('Response submitted, error:', error);
+            
             if (error) throw new Error(error.message);
 
             setQuestions((qs) =>
@@ -120,10 +153,10 @@ export default function DashboardClient() {
                 )
             );
         } catch (err) {
+            console.error('Error submitting response:', err);
             setError(
                 err instanceof Error ? err.message : 'Failed to submit response'
             );
-            console.error(err);
         } finally {
             setSubmitting((prev) => ({ ...prev, [id]: false }));
         }
@@ -132,6 +165,7 @@ export default function DashboardClient() {
     const markAsReviewed = async (id: string) => {
         const supabase = getSupabaseClient();
         try {
+            console.log('Marking question as reviewed:', id);
             const { error } = await supabase
                 .from('questions')
                 .update({
@@ -139,6 +173,9 @@ export default function DashboardClient() {
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', id);
+            
+            console.log('Question marked as reviewed, error:', error);
+            
             if (error) throw new Error(error.message);
 
             setQuestions((qs) =>
@@ -149,10 +186,10 @@ export default function DashboardClient() {
                 )
             );
         } catch (err) {
+            console.error('Error marking question as reviewed:', err);
             setError(
                 err instanceof Error ? err.message : 'Failed to update status'
             );
-            console.error(err);
         }
     };
 
@@ -311,7 +348,7 @@ function QuestionCard({
                         onChange={(e) => onResponseChange(e.target.value)}
                         placeholder="Type your response here..."
                         className="min-h-[150px] bg-card border-border focus:border-primary focus:ring-primary"
-                        disabled={question.status === 'answered' || submitting}
+                        disabled={submitting}
                     />
                     <div className="flex flex-wrap gap-2">
                         {question.status === 'pending' && (
