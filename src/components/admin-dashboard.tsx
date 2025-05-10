@@ -115,7 +115,7 @@ export default function DashboardClient() {
         } else {
             setFilteredQuestions(questions);
         }
-    }, [statusFilter, questions]);
+    }, [statusFilter, questions, authorized]);
 
     const handleResponseChange = (id: string, value: string) => {
         setResponses((prev) => ({ ...prev, [id]: value }));
