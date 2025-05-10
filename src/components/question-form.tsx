@@ -1,4 +1,4 @@
-// src/app/QuestionForm.tsx
+// src/components/question-form.tsx
 'use client';
 
 import { useState, useRef, useEffect, type MutableRefObject } from 'react';
@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { questionSchema, type QuestionFormValues } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import {
-    Form,
     FormControl,
     FormField,
     FormItem,
@@ -24,20 +23,23 @@ export default function QuestionForm() {
     const [submitError, setSubmitError] = useState<string | null>(null);
 
     // use a mutable ref so we can assign .current
-    const textareaRef = useRef<HTMLTextAreaElement | null>(null) as MutableRefObject<
-        HTMLTextAreaElement | null
-    >;
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null) as MutableRefObject<HTMLTextAreaElement | null>;
 
-    // Choose a random welcome message on initial render
-    const welcomeMessages = [
-        "What accounting question can I help with today?",
-        "Need help with QuickBooks or bookkeeping?",
-        "Have a financial reporting question?",
-        "Confused about accounting principles?",
-        "What's your accounting challenge?",
-    ];
-    const randomIndex = Math.floor(Math.random() * welcomeMessages.length);
-    const welcomeMessage = welcomeMessages[randomIndex];
+    // Moved welcomeMessage to useState to fix hydration error
+    const [welcomeMessage, setWelcomeMessage] = useState('What accounting question can I help with today?');
+
+    // Set welcome message only on client side
+    useEffect(() => {
+        const welcomeMessages = [
+            "What accounting question can I help with today?",
+            "Need help with QuickBooks or bookkeeping?",
+            "Have a financial reporting question?",
+            "Confused about accounting principles?",
+            "What's your accounting challenge?",
+        ];
+        const randomIndex = Math.floor(Math.random() * welcomeMessages.length);
+        setWelcomeMessage(welcomeMessages[randomIndex]);
+    }, []);
 
     const form = useForm<QuestionFormValues>({
         resolver: zodResolver(questionSchema),
@@ -192,88 +194,87 @@ export default function QuestionForm() {
                     {welcomeMessage}
                 </h2>
 
-                <Form form={form}>
-                    <form className="space-y-4">
-                        <FormField
-                            name="question"
-                            control={form.control}
-                            render={(field) => (
-                                <FormItem>
-                                    <FormControl>
-                                        <div className="relative">
-                                            <textarea
-                                                {...field}
-                                                ref={(el) => {
-                                                    field.ref(el);
-                                                    textareaRef.current = el;
-                                                }}
-                                                placeholder="Ask your accounting or QuickBooks question here..."
-                                                disabled={isSubmitting}
-                                                className="w-full text-lg resize-none overflow-hidden"
-                                                style={{
-                                                    backgroundColor: '#303030',
-                                                    borderColor: '#cd9f27',
-                                                    borderWidth: '1px',
-                                                    fontSize: '18px',
-                                                    borderRadius: '24px',
-                                                    padding: '0.75rem 1.5rem',
-                                                    paddingRight: '4rem',
-                                                    minHeight: '100px',
-                                                    maxHeight: '300px',
-                                                    outline: 'none',
-                                                    lineHeight: '1.5',
-                                                }}
-                                                onChange={(e) => {
-                                                    field.onChange(e);
-                                                    autoResizeTextarea();
-                                                }}
-                                            />
+                {/* Using a div instead of Form component to avoid nesting forms */}
+                <div className="space-y-4">
+                    <FormField
+                        name="question"
+                        control={form.control}
+                        render={(field) => (
+                            <FormItem>
+                                <FormControl>
+                                    <div className="relative">
+                                        <textarea
+                                            {...field}
+                                            ref={(el) => {
+                                                field.ref(el);
+                                                textareaRef.current = el;
+                                            }}
+                                            placeholder="Ask your accounting or QuickBooks question here..."
+                                            disabled={isSubmitting}
+                                            className="w-full text-lg resize-none overflow-hidden"
+                                            style={{
+                                                backgroundColor: '#303030',
+                                                borderColor: '#cd9f27',
+                                                borderWidth: '1px',
+                                                fontSize: '18px',
+                                                borderRadius: '24px',
+                                                padding: '0.75rem 1.5rem',
+                                                paddingRight: '4rem',
+                                                minHeight: '100px',
+                                                maxHeight: '300px',
+                                                outline: 'none',
+                                                lineHeight: '1.5',
+                                            }}
+                                            onChange={(e) => {
+                                                field.onChange(e);
+                                                autoResizeTextarea();
+                                            }}
+                                        />
 
-                                            <div className="absolute right-4 top-14">
-                                                <Button
-                                                    type="button"
-                                                    className="rounded-full flex items-center justify-center"
-                                                    style={{
-                                                        backgroundColor: '#cd9f27',
-                                                        padding: 0,
-                                                        borderRadius: '50%',
-                                                        width: '10px',
-                                                        height: '10px',
-                                                        minWidth: '36px',
-                                                        minHeight: '36px',
-                                                    }}
-                                                    disabled={isSubmitting}
-                                                    onClick={handleQuestionSubmit}
-                                                    aria-label="Submit question"
+                                        <div className="absolute right-4 top-14">
+                                            <Button
+                                                type="button"
+                                                className="rounded-full flex items-center justify-center"
+                                                style={{
+                                                    backgroundColor: '#cd9f27',
+                                                    padding: 0,
+                                                    borderRadius: '50%',
+                                                    width: '10px',
+                                                    height: '10px',
+                                                    minWidth: '36px',
+                                                    minHeight: '36px',
+                                                }}
+                                                disabled={isSubmitting}
+                                                onClick={handleQuestionSubmit}
+                                                aria-label="Submit question"
+                                            >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    width="18"
+                                                    height="18"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="white"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
                                                 >
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        width="18"
-                                                        height="18"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        stroke="white"
-                                                        strokeWidth="2"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                    >
-                                                        <path d="M12 19V5" />
-                                                        <path d="M5 12l7-7 7 7" />
-                                                    </svg>
-                                                </Button>
-                                            </div>
+                                                    <path d="M12 19V5" />
+                                                    <path d="M5 12l7-7 7 7" />
+                                                </svg>
+                                            </Button>
                                         </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </form>
-                </Form>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
 
                 {showEmailPopup && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4">
+                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                        <div className="bg-[#212121] rounded-lg p-6 max-w-md w-full mx-4 border border-[#3d3d3d] shadow-md">
                             <h3
                                 className="text-xl font-semibold mb-4"
                                 style={{ color: '#cd9f27' }}
