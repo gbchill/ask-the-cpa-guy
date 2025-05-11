@@ -1,4 +1,3 @@
-// src/lib/auth.ts
 // No need to import getSupabaseClient since we're not using it
 export async function signInAdmin(email: string, password: string) {
     // Check if the email and password match the environment variables

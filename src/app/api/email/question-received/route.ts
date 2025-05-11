@@ -1,7 +1,6 @@
-// src/app/api/email/question-received/route.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { sendQuestionReceivedEmail } from '@/lib/email';
+import { sendQuestionReceivedEmail, sendAdminNotificationEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
     try {
@@ -14,11 +13,20 @@ export async function POST(request: NextRequest) {
             );
         }
         
-        const success = await sendQuestionReceivedEmail(email, question);
+        // Send confirmation email to the user
+        const userEmailSuccess = await sendQuestionReceivedEmail(email, question);
         
-        if (!success) {
+        // Send notification to the admin
+        const adminEmailSuccess = await sendAdminNotificationEmail(email, question);
+        
+        if (!userEmailSuccess || !adminEmailSuccess) {
+            console.error('Failed to send emails:', {
+                userEmailSuccess,
+                adminEmailSuccess
+            });
+            
             return NextResponse.json(
-                { error: 'Failed to send email' },
+                { error: 'Failed to send one or more emails' },
                 { status: 500 }
             );
         }
