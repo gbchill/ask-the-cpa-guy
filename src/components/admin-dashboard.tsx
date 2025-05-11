@@ -1,7 +1,6 @@
-// src/components/admin-dashboard.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -52,7 +51,8 @@ export default function DashboardClient() {
         }
     };
 
-    const fetchQuestions = async () => {
+    // Use useCallback to memoize the fetchQuestions function
+    const fetchQuestions = useCallback(async () => {
         console.log('Running fetchQuestions function');
         const supabase = getSupabaseClient();
         try {
@@ -93,7 +93,7 @@ export default function DashboardClient() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [statusFilter]); // Only include statusFilter as a dependency
 
     useEffect(() => {
         if (
@@ -104,13 +104,18 @@ export default function DashboardClient() {
         }
     }, []);
 
+    // Separate effect for fetching questions
     useEffect(() => {
         if (!authorized) return;
+        
+        console.log('Triggering fetchQuestions from auth effect');
         fetchQuestions();
-    }, [authorized, fetchQuestions]); // Added fetchQuestions to the dependency array
+    }, [authorized, fetchQuestions]);
 
+    // Filter questions when statusFilter changes
     useEffect(() => {
         if (questions.length > 0) {
+            console.log('Filtering questions based on status:', statusFilter);
             if (statusFilter) {
                 setFilteredQuestions(questions.filter((q) => q.status === statusFilter));
             } else {
@@ -156,27 +161,21 @@ export default function DashboardClient() {
             console.log('Updating question in database with ID:', id);
             console.log('Update data:', updateData);
             
-            // Use the REST endpoint directly with API key for full permissions
-            const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?id=eq.${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify(updateData)
-            });
+            const supabase = getSupabaseClient();
+            const { data, error } = await supabase
+                .from('questions')
+                .update(updateData)
+                .eq('id', id)
+                .select()
+                .single();
             
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Database update failed:', response.status, errorText);
-                throw new Error(`Database update failed: ${response.status} ${errorText}`);
+            if (error) {
+                console.error('Database update failed:', error);
+                throw error;
             }
             
-            const updatedData = await response.json();
-            console.log('Database update successful with response:', updatedData);
-            return updatedData[0];
+            console.log('Database update successful with response:', data);
+            return data;
             
         } catch (error) {
             console.error('Error in updateQuestionInDatabase:', error);

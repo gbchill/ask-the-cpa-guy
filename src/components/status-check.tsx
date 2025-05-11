@@ -1,4 +1,3 @@
-// src/components/status-check.tsx
 'use client';
 
 import { useState } from 'react';

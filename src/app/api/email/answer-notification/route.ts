@@ -1,4 +1,3 @@
-// src/app/api/email/answer-notification/route.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { sendAnswerNotificationEmail } from '@/lib/email';

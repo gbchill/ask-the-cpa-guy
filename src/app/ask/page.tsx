@@ -1,4 +1,3 @@
-// app/ask/page.tsx
 import QuestionForm from '@/components/question-form';
 
 export const metadata = {

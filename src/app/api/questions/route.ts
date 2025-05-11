@@ -1,4 +1,3 @@
-// src/app/api/questions/route.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';

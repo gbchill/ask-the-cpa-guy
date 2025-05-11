@@ -1,4 +1,3 @@
-// src/lib/utils.ts
 
 /**
  * A utility to join class-names (or arrays of class-names) into a single string.

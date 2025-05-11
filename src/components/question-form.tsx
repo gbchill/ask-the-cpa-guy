@@ -1,4 +1,3 @@
-// src/components/question-form.tsx
 'use client';
 
 import { useState, useRef, useEffect, type MutableRefObject } from 'react';

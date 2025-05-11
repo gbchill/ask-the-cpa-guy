@@ -1,8 +1,7 @@
-// src/lib/email.ts
+
 import { Question } from '@/types';
 
-// Use SendGrid's v3 Node.js Library
-// https://github.com/sendgrid/sendgrid-nodejs
+
 import sgMail from '@sendgrid/mail';
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
