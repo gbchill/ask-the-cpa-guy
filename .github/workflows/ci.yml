@@ -13,6 +13,9 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       NEXT_PUBLIC_ADMIN_PASSWORD: ${{ secrets.NEXT_PUBLIC_ADMIN_PASSWORD }}
+      SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
 
     steps:
       - uses: actions/checkout@v3
@@ -24,6 +27,7 @@ jobs:
           cache: "npm"
 
       - run: npm ci
+      - run: npm install @sendgrid/mail
 
       - run: npm run lint
 

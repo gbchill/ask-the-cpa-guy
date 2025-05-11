@@ -142,6 +142,40 @@ export default function QuestionForm() {
                 ]);
             if (questionError) throw new Error('Error submitting your question');
 
+            // Send confirmation email to user
+            try {
+                await fetch('/api/email/question-received', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: values.email,
+                        question: values.question,
+                    }),
+                });
+            } catch (emailError) {
+                console.error('Error sending confirmation email:', emailError);
+                // Continue even if email fails
+            }
+
+            // Send notification to admin
+            try {
+                await fetch('/api/email/admin-notification', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: values.email,
+                        question: values.question,
+                    }),
+                });
+            } catch (emailError) {
+                console.error('Error sending admin notification:', emailError);
+                // Continue even if email fails
+            }
+
             setSubmitSuccess(true);
             setShowEmailPopup(false);
             form.reset();

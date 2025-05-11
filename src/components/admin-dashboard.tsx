@@ -1,3 +1,4 @@
+// src/components/admin-dashboard.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -67,12 +68,23 @@ export default function DashboardClient() {
             
             if (error) throw new Error(error.message);
 
-            setQuestions(data as Question[]);
-            const respObj: Record<string, string> = {};
-            data.forEach((q) => {
-                respObj[q.id] = q.cpa_response ?? '';
-            });
-            setResponses(respObj);
+            if (data && Array.isArray(data)) {
+                setQuestions(data as Question[]);
+                const respObj: Record<string, string> = {};
+                data.forEach((q) => {
+                    respObj[q.id] = q.cpa_response ?? '';
+                });
+                setResponses(respObj);
+                
+                if (statusFilter) {
+                    setFilteredQuestions(data.filter((q) => q.status === statusFilter));
+                } else {
+                    setFilteredQuestions(data);
+                }
+            } else {
+                console.error('Data is not an array or is null:', data);
+                throw new Error('Invalid data format returned from the server');
+            }
         } catch (err) {
             console.error('Error fetching questions:', err);
             setError(
@@ -84,13 +96,6 @@ export default function DashboardClient() {
     };
 
     useEffect(() => {
-        // Add console log to debug auth state
-        console.log('Auth state:', { 
-            authorized, 
-            storedAuth: typeof window !== 'undefined' ? 
-                localStorage.getItem('cpa_dashboard_auth') : null 
-        });
-        
         if (
             typeof window !== 'undefined' &&
             localStorage.getItem('cpa_dashboard_auth') === 'true'
@@ -100,91 +105,168 @@ export default function DashboardClient() {
     }, []);
 
     useEffect(() => {
-        console.log('authorized changed:', authorized);
         if (!authorized) return;
-        
         fetchQuestions();
-    }, [authorized]);
+    }, [authorized, fetchQuestions]); // Added fetchQuestions to the dependency array
 
     useEffect(() => {
-        console.log('Filtering questions:', { statusFilter, questionCount: questions.length });
-        if (statusFilter && questions.length > 0) {
-            setFilteredQuestions(
-                questions.filter((q) => q.status === statusFilter)
-            );
-        } else {
-            setFilteredQuestions(questions);
+        if (questions.length > 0) {
+            if (statusFilter) {
+                setFilteredQuestions(questions.filter((q) => q.status === statusFilter));
+            } else {
+                setFilteredQuestions([...questions]);
+            }
         }
-    }, [statusFilter, questions, authorized]);
+    }, [statusFilter, questions]);
 
     const handleResponseChange = (id: string, value: string) => {
         setResponses((prev) => ({ ...prev, [id]: value }));
     };
 
+    // Send email notification when a question is answered
+    const sendAnswerNotification = async (question: Question) => {
+        try {
+            const response = await fetch('/api/email/answer-notification', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(question),
+            });
+            
+            if (!response.ok) {
+                console.error('Email notification failed with status:', response.status);
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                return false;
+            }
+            
+            const data = await response.json();
+            return data.success;
+        } catch (err) {
+            console.error('Error sending answer notification:', err);
+            return false;
+        }
+    };
+
+    // Separate function to update the database
+    const updateQuestionInDatabase = async (id: string, updateData: Record<string, unknown>) => {
+        try {
+            // Using direct fetch instead of supabase client
+            console.log('Updating question in database with ID:', id);
+            console.log('Update data:', updateData);
+            
+            // Use the REST endpoint directly with API key for full permissions
+            const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(updateData)
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Database update failed:', response.status, errorText);
+                throw new Error(`Database update failed: ${response.status} ${errorText}`);
+            }
+            
+            const updatedData = await response.json();
+            console.log('Database update successful with response:', updatedData);
+            return updatedData[0];
+            
+        } catch (error) {
+            console.error('Error in updateQuestionInDatabase:', error);
+            throw error;
+        }
+    };
+
     const submitResponse = async (id: string) => {
         if (!responses[id]?.trim()) return;
         setSubmitting((prev) => ({ ...prev, [id]: true }));
-        const supabase = getSupabaseClient();
+        
         try {
             console.log('Submitting response for question:', id);
-            const { error } = await supabase
-                .from('questions')
-                .update({
-                    cpa_response: responses[id],
-                    status: 'answered',
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', id);
+            console.log('Response content:', responses[id]);
             
-            console.log('Response submitted, error:', error);
+            // Simple update with minimal fields
+            const updateData = {
+                cpa_response: responses[id],
+                status: 'answered',
+                updated_at: new Date().toISOString()
+            };
             
-            if (error) throw new Error(error.message);
-
-            setQuestions((qs) =>
-                qs.map((q) =>
-                    q.id === id
-                        ? {
-                            ...q,
-                            cpa_response: responses[id],
-                            status: 'answered',
-                            updated_at: new Date().toISOString(),
-                        }
-                        : q
-                )
+            // Update the database using our direct approach
+            const updatedQuestion = await updateQuestionInDatabase(id, updateData);
+            console.log('Updated question from DB:', updatedQuestion);
+            
+            // Find the original question to create the updated version
+            const originalQuestion = questions.find(q => q.id === id);
+            if (!originalQuestion) {
+                throw new Error('Question not found in state');
+            }
+            
+            // Create a new object with the updated fields
+            const updatedLocalQuestion: Question = {
+                ...originalQuestion,
+                cpa_response: responses[id],
+                status: 'answered',
+                updated_at: new Date().toISOString()
+            };
+            
+            // Update local state
+            setQuestions(prevQuestions => 
+                prevQuestions.map(q => q.id === id ? updatedLocalQuestion : q)
             );
+            
+            // Try to send the email notification
+            try {
+                const emailSent = await sendAnswerNotification(updatedLocalQuestion);
+                console.log('Email notification sent:', emailSent);
+            } catch (emailError) {
+                console.error('Failed to send email notification:', emailError);
+                // Continue even if email fails - we still want to update the UI
+            }
+            
+            // Fetch fresh data to ensure state is in sync with the database
+            await fetchQuestions();
+            
         } catch (err) {
-            console.error('Error submitting response:', err);
-            setError(
-                err instanceof Error ? err.message : 'Failed to submit response'
-            );
+            console.error('Error in submitResponse:', err);
+            setError(err instanceof Error ? err.message : 'Failed to submit response');
         } finally {
             setSubmitting((prev) => ({ ...prev, [id]: false }));
         }
     };
 
     const markAsReviewed = async (id: string) => {
-        const supabase = getSupabaseClient();
         try {
             console.log('Marking question as reviewed:', id);
-            const { error } = await supabase
-                .from('questions')
-                .update({
-                    status: 'reviewed',
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', id);
             
-            console.log('Question marked as reviewed, error:', error);
+            const updateData = {
+                status: 'reviewed',
+                updated_at: new Date().toISOString()
+            };
             
-            if (error) throw new Error(error.message);
-
-            setQuestions((qs) =>
-                qs.map((q) =>
+            // Use our direct database update function
+            const updatedQuestion = await updateQuestionInDatabase(id, updateData);
+            console.log('Question marked as reviewed, response:', updatedQuestion);
+            
+            // Update local state
+            setQuestions(prevQuestions =>
+                prevQuestions.map(q =>
                     q.id === id
                         ? { ...q, status: 'reviewed', updated_at: new Date().toISOString() }
                         : q
                 )
             );
+            
+            // Refresh data to ensure consistency
+            await fetchQuestions();
+            
         } catch (err) {
             console.error('Error marking question as reviewed:', err);
             setError(
@@ -222,16 +304,6 @@ export default function DashboardClient() {
                             Access Dashboard
                         </Button>
                     </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (loading) {
-        return (
-            <div className="container mx-auto px-4 py-10">
-                <div className="flex justify-center">
-                    <p>Loading questions...</p>
                 </div>
             </div>
         );
@@ -286,7 +358,11 @@ export default function DashboardClient() {
                     />
                 </div>
 
-                {filteredQuestions.length === 0 ? (
+                {loading ? (
+                    <div className="rounded-lg border border-border bg-card p-8 text-center">
+                        Loading questions...
+                    </div>
+                ) : filteredQuestions.length === 0 ? (
                     <div className="rounded-lg border border-border bg-card p-8 text-center">
                         No questions found in this category.
                     </div>
